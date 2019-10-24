@@ -10,6 +10,7 @@ import torch.nn as nn
 from torchvision import transforms
 from tqdm import tqdm
 from dataset.deep_globe import DeepGlobe, classToRGB, is_image_file
+from dataset.gleason import Gleason
 from utils.loss import CrossEntropyLoss2d, SoftCrossEntropyLoss2d, FocalLoss
 from utils.lovasz_losses import lovasz_softmax
 from utils.lr_scheduler import LR_Scheduler
@@ -24,7 +25,7 @@ n_class = args.n_class
 # torch.backends.cudnn.benchmark = True
 torch.backends.cudnn.deterministic = True
 
-data_path = args.data_path
+# data_path = args.data_path
 model_path = args.model_path
 if not os.path.isdir(model_path): os.mkdir(model_path)
 log_path = args.log_path
@@ -42,45 +43,50 @@ print("mode:", mode, "evaluation:", evaluation, "test:", test)
 ###################################
 print("preparing datasets and dataloaders......")
 batch_size = args.batch_size
-ids_train = [
-    image_name
-    for image_name in os.listdir(os.path.join(data_path, "train", "Sat"))
-    if is_image_file(image_name)
-]
-ids_val = [
-    image_name
-    for image_name in os.listdir(os.path.join(data_path, "crossvali", "Sat"))
-    if is_image_file(image_name)
-]
-ids_test = [
-    image_name for image_name in os.listdir(
-        os.path.join(data_path, "offical_crossvali", "Sat"))
-    if is_image_file(image_name)
-]
+# ids_train = [
+#     image_name
+#     for image_name in os.listdir(os.path.join(data_path, "train", "Sat"))
+#     if is_image_file(image_name)
+# ]
+# dataset_train = DeepGlobe(os.path.join(data_path, "train"),
+#                           ids_train,
+#                           label=True,
+#                           transform=True)
+# ids_val = [
+#     image_name
+#     for image_name in os.listdir(os.path.join(data_path, "crossvali", "Sat"))
+#     if is_image_file(image_name)
+# ]
+# dataset_val = DeepGlobe(os.path.join(data_path, "crossvali"),
+#                         ids_val,
+#                         label=True)
+# ids_test = [
+#     image_name for image_name in os.listdir(
+#         os.path.join(data_path, "offical_crossvali", "Sat"))
+#     if is_image_file(image_name)
+# ]
+
+file_index_train = args.file_index_train
+file_index_val = args.file_index_val
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-dataset_train = DeepGlobe(os.path.join(data_path, "train"),
-                          ids_train,
-                          label=True,
-                          transform=True)
+dataset_train = Gleason(file_index=file_index_train,
+                        label=True,
+                        transform=True)
 dataloader_train = torch.utils.data.DataLoader(dataset=dataset_train,
                                                batch_size=batch_size,
                                                num_workers=10,
                                                collate_fn=collate,
                                                shuffle=True,
                                                pin_memory=True)
-dataset_val = DeepGlobe(os.path.join(data_path, "crossvali"),
-                        ids_val,
-                        label=True)
+dataset_val = Gleason(file_index=file_index_val, label=True)
 dataloader_val = torch.utils.data.DataLoader(dataset=dataset_val,
                                              batch_size=batch_size,
                                              num_workers=10,
                                              collate_fn=collate,
                                              shuffle=False,
                                              pin_memory=True)
-dataset_test = DeepGlobe(os.path.join(data_path, "offical_crossvali"),
-                         ids_test,
-                         label=False)
+dataset_test = Gleason(file_index=file_index_val, label=True)
 dataloader_test = torch.utils.data.DataLoader(dataset=dataset_test,
                                               batch_size=batch_size,
                                               num_workers=10,

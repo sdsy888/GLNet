@@ -92,7 +92,10 @@ def label_bluring(inputs):
 
 class Gleason(data.Dataset):
     """input and label image dataset"""
-    def __init__(self, file_index='./data/file_index.csv', transform=False):
+    def __init__(self,
+                 file_index='./data/file_index.csv',
+                 label=False,
+                 transform=False):
         super(Gleason, self).__init__()
         """
         Args:
@@ -100,6 +103,7 @@ class Gleason(data.Dataset):
         fileDir(string):  directory with all the input images.
         transform(callable, optional): Optional transform to be applied on a sample
         """
+        self.label = label
         self.transform = transform
         self.file_index = file_index
         self.classdict = {
@@ -113,6 +117,8 @@ class Gleason(data.Dataset):
         self.file_list = []
         with open(self.file_index, 'r') as fp:
             self.file_list = fp.read().splitlines()
+            self.file_list = [(i.split(',')[0], i.split(',')[1])
+                              for i in self.file_list]
 
         self.color_jitter = transforms.ColorJitter(brightness=0.3,
                                                    contrast=0.3,
@@ -122,18 +128,16 @@ class Gleason(data.Dataset):
 
     def __getitem__(self, index):
         sample = {}
-        sample['id'] = self.ids[index][:16]
-        image = Image.open(os.path.join(self.root,
-                                        "Sat/" + self.ids[index]))  # w, h
+        img_fn = self.file_list[index][0]
+        label_fn = self.file_list[index][1]
+        sample['id'] = img_fn[0][:16]  # only the file name: slide001_core005
+        image = Image.open(img_fn)  # w, h
         sample['image'] = image
         # sample['image'] = transforms.functional.adjust_contrast(image, 1.4)
         if self.label:
             # label = scipy.io.loadmat(join(self.root, 'Notification/' + self.ids[index].replace('_sat.jpg', '_mask.mat')))["label"]
             # label = Image.fromarray(label)
-            label = Image.open(
-                os.path.join(
-                    self.root, 'Label/' +
-                    self.ids[index].replace('_sat.jpg', '_mask.png')))
+            label = Image.open(label_fn)
             sample['label'] = label
         if self.transform and self.label:
             image, label = self._transform(image, label)
@@ -176,4 +180,4 @@ class Gleason(data.Dataset):
         return image, label
 
     def __len__(self):
-        return len(self.ids)
+        return len(self.file_list)
