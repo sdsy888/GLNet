@@ -1,3 +1,5 @@
+"""Load Gleason2019 dataset"""
+
 import os
 import torch.utils.data as data
 import numpy as np
@@ -13,7 +15,7 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 def is_image_file(filename):
     return any(
         filename.endswith(extension)
-        for extension in [".png", ".jpg", ".jpeg"])
+        for extension in [".png", ".jpg", ".jpeg", ".tif"])
 
 
 def find_label_map_name(img_filenames, labelExtension=".png"):
@@ -88,29 +90,29 @@ def label_bluring(inputs):
     return outputs
 
 
-class DeepGlobe(data.Dataset):
+class Gleason(data.Dataset):
     """input and label image dataset"""
-    def __init__(self, root, ids, label=False, transform=False):
-        super(DeepGlobe, self).__init__()
+    def __init__(self, file_index='./data/file_index.csv', transform=False):
+        super(Gleason, self).__init__()
         """
         Args:
 
         fileDir(string):  directory with all the input images.
         transform(callable, optional): Optional transform to be applied on a sample
         """
-        self.root = root
-        self.label = label
         self.transform = transform
-        self.ids = ids
+        self.file_index = file_index
         self.classdict = {
-            1: "urban",
-            2: "agriculture",
-            3: "rangeland",
-            4: "forest",
-            5: "water",
-            6: "barren",
-            0: "unknown"
+            1: "benign",
+            # 2: "agriculture",
+            3: "severe",
+            4: "more_severe",
+            5: "most_severe",
+            0: "background"
         }
+        self.file_list = []
+        with open(self.file_index, 'r') as fp:
+            self.file_list = fp.read().splitlines()
 
         self.color_jitter = transforms.ColorJitter(brightness=0.3,
                                                    contrast=0.3,
@@ -120,7 +122,7 @@ class DeepGlobe(data.Dataset):
 
     def __getitem__(self, index):
         sample = {}
-        sample['id'] = self.ids[index][:-8]
+        sample['id'] = self.ids[index][:16]
         image = Image.open(os.path.join(self.root,
                                         "Sat/" + self.ids[index]))  # w, h
         sample['image'] = image
