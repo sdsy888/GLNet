@@ -6,7 +6,7 @@ python train_deep_globe.py \
 --log_path "/home/chenwy/deep_globe/runs/" \
 --task_name "fpn_deepglobe_global" \
 --mode 1 \
---batch_size 4 \
---sub_batch_size 8 \
+--batch_size 2 \
+--sub_batch_size 2 \
 --size_g 320 \
 --size_p 320 \
