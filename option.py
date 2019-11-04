@@ -104,7 +104,7 @@ class Options():
         args = self.parser.parse_args()
         # default settings for epochs and lr
         if args.mode == 1 or args.mode == 3:
-            args.num_epochs = 120
+            args.num_epochs = 100
             args.lr = 5e-5
         else:
             args.num_epochs = 50

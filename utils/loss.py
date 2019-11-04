@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
+import numpy as np
 
 
 class CrossEntropyLoss2d(nn.Module):
@@ -18,8 +19,8 @@ def one_hot(index, classes):
     # view = index.size()[:1] + (1,) + index.size()[1:]
     #####################################################
     # index is flatten (during ignore) ##################
-    size = index.size()[:1] + (classes,)
-    view = index.size()[:1] + (1,)
+    size = index.size()[:1] + (classes, )
+    view = index.size()[:1] + (1, )
     #####################################################
 
     # mask = torch.Tensor(size).fill_(0).to(device)
@@ -31,8 +32,12 @@ def one_hot(index, classes):
 
 
 class FocalLoss(nn.Module):
-
-    def __init__(self, gamma=0, eps=1e-7, size_average=True, one_hot=True, ignore=None):
+    def __init__(self,
+                 gamma=0,
+                 eps=1e-7,
+                 size_average=True,
+                 one_hot=True,
+                 ignore=None):
         super(FocalLoss, self).__init__()
         self.gamma = gamma
         self.eps = eps
@@ -40,33 +45,39 @@ class FocalLoss(nn.Module):
         self.one_hot = one_hot
         self.ignore = ignore
 
-    def forward(self, input, target):
+    def forward(self, input_data, target):
         '''
         only support ignore at 0
         '''
-        B, C, H, W = input.size()
-        input = input.permute(0, 2, 3, 1).contiguous().view(-1, C)  # B * H * W, C = P, C
+        B, C, H, W = input_data.size()
+        input_data = input_data.permute(0, 2, 3, 1).contiguous().view(
+            -1, C)  # B * H * W, C = P, C
         target = target.view(-1)
         if self.ignore is not None:
             valid = (target != self.ignore)
-            input = input[valid]
+            input_data = input_data[valid]
             target = target[valid]
 
-        if self.one_hot: target = one_hot(target, input.size(1))
-        probs = F.softmax(input, dim=1)
+        # print('before one_hot', np.unique(target))
+        if self.one_hot: target = one_hot(target, input_data.size(1))
+        # print('after one_hot', np.unique(target))
+        import pdb
+        # pdb.set_trace()
+        # print("check probs * target")
+        probs = F.softmax(input_data, dim=1)
         probs = (probs * target).sum(1)
-        probs = probs.clamp(self.eps, 1. - self.eps)
 
+        probs = probs.clamp(self.eps, 1. - self.eps)
         log_p = probs.log()
-        # print('probs size= {}'.format(probs.size()))
-        # print(probs)
 
         batch_loss = -(torch.pow((1 - probs), self.gamma)) * log_p
-        # print('-----bacth_loss------')
-        # print(batch_loss)
 
         if self.size_average:
             loss = batch_loss.mean()
+            # try:
+            #     loss = batch_loss.mean()
+            # except Exception as e:
+            #     print(e)
         else:
             loss = batch_loss.sum()
         return loss
@@ -80,6 +91,6 @@ class SoftCrossEntropyLoss2d(nn.Module):
         loss = 0
         inputs = -F.log_softmax(inputs, dim=1)
         for index in range(inputs.size()[0]):
-            loss += F.conv2d(inputs[range(index, index+1)], targets[range(index, index+1)])/(targets.size()[2] *
-                                                                                             targets.size()[3])
+            loss += F.conv2d(inputs[range(index, index + 1)], targets[range(
+                index, index + 1)]) / (targets.size()[2] * targets.size()[3])
         return loss

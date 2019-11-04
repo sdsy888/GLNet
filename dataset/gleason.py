@@ -13,9 +13,7 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
 def is_image_file(filename):
-    return any(
-        filename.endswith(extension)
-        for extension in [".png", ".jpg", ".jpeg", ".tif"])
+    return any(filename.endswith(extension) for extension in [".png", ".jpg", ".jpeg", ".tif"])
 
 
 def find_label_map_name(img_filenames, labelExtension=".png"):
@@ -75,8 +73,7 @@ def class_to_target(inputs, numClass):
         indices = np.where(inputs == index)
         temp = np.zeros(shape=7, dtype=np.float32)
         temp[index] = 1
-        target[indices[0].tolist(), indices[1].tolist(), indices[2].tolist(
-        ), :] = temp
+        target[indices[0].tolist(), indices[1].tolist(), indices[2].tolist(), :] = temp
     return target.transpose(0, 3, 1, 2)
 
 
@@ -85,17 +82,13 @@ def label_bluring(inputs):
     outputs = np.ones((batchSize, numClass, height, width), dtype=np.float)
     for batchCnt in range(batchSize):
         for index in range(numClass):
-            outputs[batchCnt, index, ...] = cv2.GaussianBlur(
-                inputs[batchCnt, index, ...].astype(np.float), (7, 7), 0)
+            outputs[batchCnt, index, ...] = cv2.GaussianBlur(inputs[batchCnt, index, ...].astype(np.float), (7, 7), 0)
     return outputs
 
 
 class Gleason(data.Dataset):
     """input and label image dataset"""
-    def __init__(self,
-                 file_index='./data/file_index.csv',
-                 label=False,
-                 transform=False):
+    def __init__(self, file_index='./data/file_index.csv', label=False, transform=False):
         super(Gleason, self).__init__()
         """
         Args:
@@ -117,33 +110,36 @@ class Gleason(data.Dataset):
         self.file_list = []
         with open(self.file_index, 'r') as fp:
             self.file_list = fp.read().splitlines()
-            self.file_list = [(i.split(',')[0], i.split(',')[1])
-                              for i in self.file_list]
+            self.file_list = [(i.split(',')[0], i.split(',')[1]) for i in self.file_list]
 
-        self.color_jitter = transforms.ColorJitter(brightness=0.3,
-                                                   contrast=0.3,
-                                                   saturation=0.3,
-                                                   hue=0.04)
-        self.resizer = transforms.Resize((2448, 2448))
+        self.color_jitter = transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.04)
+        # using bilinear could lead to new label
+        # self.resizer = transforms.Resize((5120, 5120), Image.BILINEAR)
+        self.resizer = transforms.Resize((5120, 5120), Image.NEAREST)
 
     def __getitem__(self, index):
         sample = {}
         img_fn = self.file_list[index][0]
         label_fn = self.file_list[index][1]
         sample['id'] = img_fn[0][:16]  # only the file name: slide001_core005
-        image = Image.open(img_fn)  # w, h
+        image = self.resizer(Image.open(img_fn))  # w, h
         sample['image'] = image
+        # print('%%%%', sample['image'].size)
+
         # sample['image'] = transforms.functional.adjust_contrast(image, 1.4)
         if self.label:
             # label = scipy.io.loadmat(join(self.root, 'Notification/' + self.ids[index].replace('_sat.jpg', '_mask.mat')))["label"]
             # label = Image.fromarray(label)
-            label = Image.open(label_fn)
+            label = self.resizer(Image.open(label_fn))
+            # print(label_fn, label.size)
             sample['label'] = label
+            # print('****', sample['label'].size)
         if self.transform and self.label:
             image, label = self._transform(image, label)
             sample['image'] = image
             sample['label'] = label
         # return {'image': image.astype(np.float32), 'label': label.astype(np.int64)}
+        # print('before', sample['image'].size, sample['label'].size)
         return sample
 
     def _transform(self, image, label):

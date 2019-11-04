@@ -1,3 +1,4 @@
+
 export CUDA_VISIBLE_DEVICES=0
 python train_deep_globe.py \
 --n_class 7 \

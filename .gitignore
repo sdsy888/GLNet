@@ -12,7 +12,9 @@
 .vscode
 .pytest_cache
 /experiments
-
+/saved_models
+/log
+/logs
 # resource temp folder
 tests/resources/temp/*
 !tests/resources/temp/.gitkeep
